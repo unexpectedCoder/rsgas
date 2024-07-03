@@ -1,12 +1,9 @@
 use std::f64::consts::PI;
-use std::fs::File;
-use std::io::Write;
 use std::iter::zip;
-use std::path::Path;
 
 use itertools::{izip, Itertools};
 
-use super::utils::{min, linspace};
+use super::utils::{Results, min, linspace};
 
 
 pub struct Task {
@@ -57,83 +54,7 @@ impl Task {
 }
 
 
-pub struct EulerResults
-{
-    t: Vec<f64>,
-    p: Vec<Vec<f64>>,
-    piston_v: Vec<f64>,
-    piston_x: Vec<f64>
-}
-
-
-impl EulerResults
-{
-    fn new(t: Vec<f64>,
-           p: Vec<Vec<f64>>,
-           piston_v: Vec<f64>,
-           piston_x: Vec<f64>) -> Self
-    {
-        Self {
-            t, p, piston_v, piston_x
-        }
-    }
-
-    pub fn time(&self) -> &Vec<f64>
-    {
-        &self.t
-    }
-
-    pub fn pressure_on_piston(&self) -> Vec<f64>
-    {
-        self.p.iter().map(
-            |pi| pi[pi.len() - 2]
-        ).collect_vec()
-    }
-
-    pub fn pressure_on_bottom(&self) -> Vec<f64>
-    {
-        self.p.iter().map(
-            |pi| pi[1]
-        ).collect_vec()
-    }
-
-    pub fn piston_speed(&self) -> &Vec<f64>
-    {
-        &self.piston_v
-    }
-
-    pub fn piston_coordinate(&self) -> &Vec<f64>
-    {
-        &self.piston_x
-    }
-
-    pub fn save_csv(&self, path: &Path)
-    {
-        let display = path.display();
-        let mut file = match File::create(path) {
-            Err(why) => panic!("couldn't create {}: {}", display, why),
-            Ok(file) => file
-        };
-        file.write_all("t,x,v,p_piston,p_bottom\n".as_bytes()).expect(
-            "writing error"
-        );
-        for (t, x, v, pp, pb) in izip!(
-                self.time(),
-                self.piston_coordinate(),
-                self.piston_speed(),
-                self.pressure_on_piston(),
-                self.pressure_on_bottom()
-        )
-        {
-            writeln!(&mut file, "{},{},{},{},{}", t, x, v, pp, pb).expect(
-                "writing error"
-            );
-        }
-    }
-}
-
-
-pub fn solve(task: &Task) -> EulerResults
+pub fn solve(task: &Task) -> Results
 {
     let k = task.gas_k;
 
@@ -149,12 +70,14 @@ pub fn solve(task: &Task) -> EulerResults
 
     let capacity = 1000;
     let mut t_store: Vec<f64> = Vec::with_capacity(capacity);
-    let mut p_store: Vec<Vec<f64>> = Vec::with_capacity(capacity);
+    let mut p_piston_store: Vec<f64> = Vec::with_capacity(capacity);
+    let mut p_bottom_store: Vec<f64> = Vec::with_capacity(capacity);
     let mut piston_v_store: Vec<f64> = Vec::with_capacity(capacity);
     let mut piston_x_store: Vec<f64> = Vec::with_capacity(capacity);
 
     t_store.push(t);
-    p_store.push(p);
+    p_piston_store.push(*p.last().unwrap());
+    p_bottom_store.push(*p.first().unwrap());
     piston_v_store.push(piston_v);
     piston_x_store.push(piston_x);
 
@@ -194,14 +117,43 @@ pub fn solve(task: &Task) -> EulerResults
         (mesh, dx) = (new_mesh, new_dx);
 
         t_store.push(t);
-        p_store.push(p);
+        p_piston_store.push(p[p.len() - 2]);
+        p_bottom_store.push(p[1]);
         piston_v_store.push(piston_v);
         piston_x_store.push(piston_x);
     }
 
-    EulerResults::new(
-        t_store, p_store, piston_v_store, piston_x_store
+    Results::new(
+        t_store, p_piston_store, p_bottom_store, piston_v_store, piston_x_store
     )
+}
+
+
+fn init(mesh: &[f64],
+    p0: f64,
+    temp0: f64,
+    gas_const: f64,
+    k: f64) -> (Vec<Vec<f64>>, Vec<f64>)
+{
+let n = mesh.len() + 1;
+let p = vec![p0; n];
+let rho = p
+    .iter()
+    .map(|pi| pi / (temp0 * gas_const))
+    .collect_vec();
+let e = zip(&p, &rho)
+    .map(|(pi, rhoi)| pi / ((k - 1.) * rhoi));
+
+let mut q = vec![vec![0.0; n]; 3];
+for (q1, rhoi) in zip(q[0].iter_mut(), &rho) {
+    *q1 = *rhoi;
+}
+for (q3, rhoi, ei)
+    in izip!(q[2].iter_mut(), &rho, e) {
+    *q3 = rhoi * ei;
+}
+
+(q, p)
 }
 
 
@@ -215,34 +167,6 @@ fn update_boundaries(q: &mut [Vec<f64>], piston_v: f64)
     q[0][n - 1] = q[0][n - 2];
     q[1][n - 1] = -q[1][n - 2] + 2.*q[0][n - 2]*piston_v;
     q[2][n - 1] = q[2][n - 2];
-}
-
-
-fn init(mesh: &[f64],
-        p0: f64,
-        temp0: f64,
-        gas_const: f64,
-        k: f64) -> (Vec<Vec<f64>>, Vec<f64>)
-{
-    let n = mesh.len() + 1;
-    let p = vec![p0; n];
-    let rho = p
-        .iter()
-        .map(|pi| pi / (temp0 * gas_const))
-        .collect_vec();
-    let e = zip(&p, &rho)
-        .map(|(pi, rhoi)| pi / ((k - 1.) * rhoi));
-
-    let mut q = vec![vec![0.0; n]; 3];
-    for (q1, rhoi) in zip(q[0].iter_mut(), &rho) {
-        *q1 = *rhoi;
-    }
-    for (q3, rhoi, ei)
-        in izip!(q[2].iter_mut(), &rho, e) {
-        *q3 = rhoi * ei;
-    }
-
-    (q, p)
 }
 
 

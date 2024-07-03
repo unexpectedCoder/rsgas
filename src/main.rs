@@ -10,6 +10,10 @@ use crate::lagrange_problem::{
     euler::{
         solve as solve_euler,
         Task as EulerTask
+    },
+    lagrange::{
+        solve as solve_lagrange,
+        Task as LagrangeTask
     }
 };
 
@@ -55,13 +59,31 @@ fn main()
         alpha,
         beta
     );
+    let lagrange_task = LagrangeTask::new(
+        piston_mass,
+        tube_len,
+        tube_diameter,
+        gas_const,
+        gas_k,
+        p0,
+        temper0,
+        x0,
+        n_volumes,
+        cfl
+    );
 
     let mut timer = Instant::now();
     let acc_sol = solve_accurately(&acc_task, 200);
-    println!("Accurate time is {:.2?}", timer.elapsed());
+    let mut dt = timer.elapsed();
+    println!("Accurate time is {:.2?}", dt);
     timer = Instant::now();
     let euler_sol = solve_euler(&euler_task);
-    println!("Euler time is {:.2?}", timer.elapsed());
+    dt = timer.elapsed();
+    println!("Euler time is {:.2?}", dt);
+    timer = Instant::now();
+    let lagrange_sol = solve_lagrange(&lagrange_task);
+    dt = timer.elapsed();
+    println!("Lagrange time is {:.2?}", dt);
 
     let res_dir = Path::new("results");
     if !res_dir.try_exists().unwrap() {
@@ -74,4 +96,5 @@ fn main()
 
     acc_sol.save_csv(res_dir.join("acc_results.csv").as_path());
     euler_sol.save_csv(res_dir.join("euler_results.csv").as_path());
+    lagrange_sol.save_csv(res_dir.join("lagrange_results.csv").as_path());
 }
