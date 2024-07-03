@@ -1,4 +1,5 @@
 use std::fs::create_dir_all;
+use std::time::Instant;
 use std::path::Path;
 
 use crate::lagrange_problem::{
@@ -40,8 +41,6 @@ fn main()
         temper0,
         x0
     );
-    let acc_sol = solve_accurately(&acc_task, 200);
-
     let euler_task = EulerTask::new(
         piston_mass,
         tube_len,
@@ -56,13 +55,19 @@ fn main()
         alpha,
         beta
     );
+
+    let mut timer = Instant::now();
+    let acc_sol = solve_accurately(&acc_task, 200);
+    println!("Accurate time is {:.2?}", timer.elapsed());
+    timer = Instant::now();
     let euler_sol = solve_euler(&euler_task);
+    println!("Euler time is {:.2?}", timer.elapsed());
 
     let res_dir = Path::new("results");
     if !res_dir.try_exists().unwrap() {
         if let Err(why) = create_dir_all(res_dir) {
             panic!(
-                "error while checking the dir existence ({})", why
+                "error while creating dirs ({})", why
             )
         };
     }
