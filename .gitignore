@@ -3,4 +3,6 @@
 !.gitignore
 *.csv
 *.png
+*.svg
+perf.data*
 /results

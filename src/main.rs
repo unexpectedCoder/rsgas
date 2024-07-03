@@ -60,11 +60,10 @@ fn main()
 
     let res_dir = Path::new("results");
     if !res_dir.try_exists().unwrap() {
-        match create_dir_all(res_dir) {
-            Err(why) => panic!(
+        if let Err(why) = create_dir_all(res_dir) {
+            panic!(
                 "error while checking the dir existence ({})", why
-            ),
-            Ok(()) => ()
+            )
         };
     }
 

@@ -20,13 +20,13 @@ pub struct Task {
 
 impl Task {
     pub fn new(piston_mass: f64,
-           tube_len: f64,
-           tube_diameter: f64,
-           gas_const: f64,
-           gas_k: f64,
-           p0: f64,
-           temper0: f64,
-           x0: f64) -> Task
+               tube_len: f64,
+               tube_diameter: f64,
+               gas_const: f64,
+               gas_k: f64,
+               p0: f64,
+               temper0: f64,
+               x0: f64) -> Task
     {
         Task {
             piston_mass,
@@ -79,13 +79,13 @@ impl Solution
     pub fn save_csv(&self, path: &Path)
     {
         let display = path.display();
-        let mut file = match File::create(&path) {
+        let mut file = match File::create(path) {
             Err(why) => panic!("couldn't create {}: {}", display, why),
             Ok(file) => file
         };
-        file.write("t,x,v\n".as_bytes()).expect("writing error");
+        file.write_all("t,x,v\n".as_bytes()).expect("writing error");
         for (ti, xi, vi) in izip!(&self.t, &self.x, &self.v) {
-            write!(&mut file, "{},{},{}\n", ti, xi, vi)
+            writeln!(&mut file, "{},{},{}", ti, xi, vi)
                 .expect("writing error");
         }
     }
@@ -121,12 +121,12 @@ pub fn solve(task: &Task, n: usize) -> Solution
     let mut t = vec![0.0; n];
     let duration = tau*(2. + gamma*m_ratio);
     let dt = duration / (n as f64);
-    for i in 1..n {
-        t[i] = (i as f64) * dt;
+    for (i, ti) in t.iter_mut().enumerate().skip(1) {
+        *ti = (i as f64) * dt;
     }
     let mut x = Vec::from_iter(t.iter().map(|&t| fx(t)));
     let i = x.iter().position(|&xi| xi > task.tube_len);
-    if i != None {
+    if i.is_some() {
         let indx = i.unwrap();
         x = Vec::from(&x[..indx]);
         t = Vec::from(&t[..indx]);

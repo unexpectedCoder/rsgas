@@ -110,11 +110,11 @@ impl EulerResults
     pub fn save_csv(&self, path: &Path)
     {
         let display = path.display();
-        let mut file = match File::create(&path) {
+        let mut file = match File::create(path) {
             Err(why) => panic!("couldn't create {}: {}", display, why),
             Ok(file) => file
         };
-        file.write("t,x,v,p_piston,p_bottom\n".as_bytes()).expect(
+        file.write_all("t,x,v,p_piston,p_bottom\n".as_bytes()).expect(
             "writing error"
         );
         for (t, x, v, pp, pb) in izip!(
@@ -125,7 +125,7 @@ impl EulerResults
                 self.pressure_on_bottom()
         )
         {
-            write!(&mut file, "{},{},{},{},{}\n", t, x, v, pp, pb).expect(
+            writeln!(&mut file, "{},{},{},{},{}", t, x, v, pp, pb).expect(
                 "writing error"
             );
         }
@@ -205,7 +205,7 @@ pub fn solve(task: &Task) -> EulerResults
 }
 
 
-fn update_boundaries(q: &mut Vec<Vec<f64>>, piston_v: f64)
+fn update_boundaries(q: &mut [Vec<f64>], piston_v: f64)
 {
     q[0][0] = q[0][1];
     q[1][0] = -q[1][1];
@@ -218,7 +218,7 @@ fn update_boundaries(q: &mut Vec<Vec<f64>>, piston_v: f64)
 }
 
 
-fn init(mesh: &Vec<f64>,
+fn init(mesh: &[f64],
         p0: f64,
         temp0: f64,
         gas_const: f64,
@@ -246,7 +246,7 @@ fn init(mesh: &Vec<f64>,
 }
 
 
-fn equation_of_state(q: &Vec<Vec<f64>>, k: f64) -> Vec<f64>
+fn equation_of_state(q: &[Vec<f64>], k: f64) -> Vec<f64>
 {
     let u = zip(&q[0], &q[1])
         .map(|(rho, rho_u)| rho_u / rho);
@@ -269,10 +269,10 @@ fn calc_sonic(p: &Vec<f64>, rho: &Vec<f64>, k: f64) -> Vec<f64>
 }
 
 
-fn ausm_plus(q: &Vec<Vec<f64>>,
-             u_borders: &Vec<f64>,
-             c: &Vec<f64>,
-             p: &Vec<f64>,
+fn ausm_plus(q: &[Vec<f64>],
+             u_borders: &[f64],
+             c: &[f64],
+             p: &[f64],
              alpha: f64,
              beta: f64) -> Vec<Vec<f64>>
 {
@@ -306,7 +306,7 @@ fn ausm_plus(q: &Vec<Vec<f64>>,
     let q3_left = &q[2][..n];
     let p_left = &p[..n];
     let flux_left = calc_ausm_flux(
-        &[q1_left, q2_left, q3_left], &p_left
+        &[q1_left, q2_left, q3_left], p_left
     );
 
     let q1_right = &q[0][1..];
@@ -314,14 +314,14 @@ fn ausm_plus(q: &Vec<Vec<f64>>,
     let q3_right = &q[2][1..];
     let p_right = &p[1..];
     let flux_right = calc_ausm_flux(
-        &[q1_right, q2_right, q3_right], &p_right
+        &[q1_right, q2_right, q3_right], p_right
     );
 
     let interface_mach = calc_interface_mach(
         &mach_left, &mach_right, beta
     );
     let interface_p = calc_interface_pressure(
-        &mach_left, &mach_right, &p, alpha
+        &mach_left, &mach_right, p, alpha
     );
 
     let m = interface_c.len();
@@ -364,8 +364,8 @@ fn calc_ausm_flux(q: &[&[f64]], p: &[f64]) -> Vec<Vec<f64>>
 }
 
 
-fn calc_interface_mach(mach_left: &Vec<f64>,
-                       mach_right: &Vec<f64>,
+fn calc_interface_mach(mach_left: &[f64],
+                       mach_right: &[f64],
                        beta: f64) -> Vec<f64>
 {
     zip(
@@ -377,7 +377,7 @@ fn calc_interface_mach(mach_left: &Vec<f64>,
 }
 
 
-fn f_beta(mach: &Vec<f64>, sign: char, beta: f64) -> Vec<f64>
+fn f_beta(mach: &[f64], sign: char, beta: f64) -> Vec<f64>
 {
     if sign == '+' {
         return mach
@@ -411,9 +411,9 @@ fn f_beta(mach: &Vec<f64>, sign: char, beta: f64) -> Vec<f64>
 }
 
 
-fn calc_interface_pressure(mach_left: &Vec<f64>,
-                           mach_right: &Vec<f64>,
-                           p: &Vec<f64>,
+fn calc_interface_pressure(mach_left: &[f64],
+                           mach_right: &[f64],
+                           p: &[f64],
                            alpha: f64) -> Vec<f64>
 {
     let gl = g_alpha(mach_left, '+', alpha);
@@ -431,7 +431,7 @@ fn calc_interface_pressure(mach_left: &Vec<f64>,
 }
 
 
-fn g_alpha(mach: &Vec<f64>, sign: char, alpha: f64) -> Vec<f64>
+fn g_alpha(mach: &[f64], sign: char, alpha: f64) -> Vec<f64>
 {
     if sign == '+' {
         return mach
@@ -469,8 +469,8 @@ fn g_alpha(mach: &Vec<f64>, sign: char, alpha: f64) -> Vec<f64>
 }
 
 
-fn calc_time_step(q: &Vec<Vec<f64>>,
-                  c: &Vec<f64>,
+fn calc_time_step(q: &[Vec<f64>],
+                  c: &[f64],
                   dx: f64,
                   cfl: f64) -> f64
 {
@@ -486,13 +486,13 @@ fn calc_time_step(q: &Vec<Vec<f64>>,
 
 fn step_up_euler(new_dx: f64,
                  dx: f64,
-                 q: &Vec<Vec<f64>>,
+                 q: &[Vec<f64>],
                  f_left: &[&[f64]],
                  f_right: &[&[f64]],
                  dt: f64) -> Vec<Vec<f64>>
 {
     let n = q[0].len();
-    let mut new_q = q.clone();
+    let mut new_q = q.to_owned();
     
     for i in 1..n - 1 {
         new_q[0][i] = dx/new_dx * (

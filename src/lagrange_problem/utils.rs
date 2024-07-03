@@ -11,7 +11,7 @@ pub fn linspace(start: f64, stop: f64, n: usize) -> (Vec<f64>, f64)
 }
 
 
-pub fn min(v: &Vec<f64>) -> f64
+pub fn min(v: &[f64]) -> f64
 {
     v.iter().fold(f64::INFINITY, |a, &b| a.min(b))
 }
