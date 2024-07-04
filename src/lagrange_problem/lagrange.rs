@@ -6,16 +6,16 @@ use super::utils::{Results, linspace, min};
 
 
 pub struct Task {
-    piston_mass: f64,
-    tube_len: f64,
-    tube_diameter: f64,
-    gas_const: f64,
-    gas_k: f64,
-    p0: f64,
-    temper0: f64,
-    x0: f64,
-    n_volumes: usize,
-    cfl: f64
+    pub piston_mass: f64,
+    pub tube_len: f64,
+    pub tube_diameter: f64,
+    pub gas_const: f64,
+    pub gas_k: f64,
+    pub p0: f64,
+    pub temper0: f64,
+    pub x0: f64,
+    pub n_volumes: usize,
+    pub cfl: f64
 }
 
 

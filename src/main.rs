@@ -14,7 +14,8 @@ use crate::lagrange_problem::{
     lagrange::{
         solve as solve_lagrange,
         Task as LagrangeTask
-    }
+    },
+    lagrange_nd::solve as solve_lagrange_nd
 };
 
 pub mod lagrange_problem;
@@ -84,6 +85,10 @@ fn main()
     let lagrange_sol = solve_lagrange(&lagrange_task);
     dt = timer.elapsed();
     println!("Lagrange time is {:.2?}", dt);
+    timer = Instant::now();
+    let lagrange_ndsol = solve_lagrange_nd(&lagrange_task);
+    dt = timer.elapsed();
+    println!("LagrangeND time is {:.2?}", dt);
 
     let res_dir = Path::new("results");
     if !res_dir.try_exists().unwrap() {
@@ -97,4 +102,7 @@ fn main()
     acc_sol.save_csv(res_dir.join("acc_results.csv").as_path());
     euler_sol.save_csv(res_dir.join("euler_results.csv").as_path());
     lagrange_sol.save_csv(res_dir.join("lagrange_results.csv").as_path());
+    lagrange_ndsol.save_csv(
+        res_dir.join("lagrange_results_nd.csv").as_path()
+    );
 }

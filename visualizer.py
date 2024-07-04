@@ -31,6 +31,14 @@ with open(os.path.join(RES_DIR, "lagrange_results.csv"), "r") as f:
         for k, v in line.items():
             lagrange_sol[k].append(float(v))
 
+
+with open(os.path.join(RES_DIR, "lagrange_results_nd.csv"), "r") as f:
+    data = csv.DictReader(f)
+    lagrange_sol = {k: [] for k in data.fieldnames}
+    for line in data:
+        for k, v in line.items():
+            lagrange_sol[k].append(float(v))
+
 plt.style.use("bmh")
 
 # Euler
